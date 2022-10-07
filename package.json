@@ -1,0 +1,21 @@
+{
+  "name": "action-docker-build-dependencies",
+  "version": "0.0.0",
+  "description": "This action is intended to build a Docker image separately from its dependencies using builkit.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha --exit ./test"
+  },
+  "keywords": [],
+  "author": "Jo Colina <jo@jocolina.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^4.3.6",
+    "mocha": "^10.0.0",
+    "sinon": "^14.0.0"
+  }
+}

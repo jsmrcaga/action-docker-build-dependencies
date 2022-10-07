@@ -1,0 +1,32 @@
+name: Test
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  build_intermediary_image:
+    name: Build an intermediary image
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@master
+
+      # Warning: `pre` execution is not supported for local action from './'
+      - name: Login GitHub CR
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u jsmrcaga --password-stdin
+
+      - uses: ./
+        name: Pull or build intermediary image
+        id: docker_deps
+        with:
+          compute_dockerfile_hash: true
+          intermediary_hash: ${{ hashFiles('package*.json') }}
+
+          intermediary_image_as: npm_deps
+          intermediary_image_url: ghcr.io/jsmrcaga/action-docker-build-dependencies-test
+          
+          should_push_intermediary_image: true
+
+      - run: DOCKER_BUILDKIT=1 docker build -t tests --build-arg BASE_IMAGE="${{ steps.docker_deps.outputs.intermediary_tag }}" .
+      - run: docker run --rm tests

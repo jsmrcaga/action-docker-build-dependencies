@@ -8,9 +8,12 @@ by avoiding building the same bootstrap image every time.
 Caching this dependency image can also speedup your production build if done correctly.
 
 This action will build the intermediary image and push it to a repository.
-Next time this action runs, the image will be donwloaded instead (if the `intermediary_image_name` matches an existing image).
+Next time this action runs, the image will be donwloaded instead (if the `intermediary_image_as` matches an existing image).
 
 Then the action will only build/cache your intermediary image. Building the final image is still up to you.
+
+## Important
+You should build your final image using `DOCKER_BUILDKIT=1`
 
 ## Usage
 
@@ -33,6 +36,7 @@ The second hash will be computed automatically by this action, it will read the 
 jobs:
 	build_my_docker_image:
 		- name: Build docker image and dependencies
+		  id: deps
 		  uses: jsmrcaga/action-docker-build-dependencies
 		  with:
 		  	dockerfile_path: '.'
@@ -44,7 +48,7 @@ jobs:
 		  	# Very useful if you change the "dependency" part of your Dockerfile
 		  	compute_dockerfile_hash: true
 		  	intermediary_hash: hash-of-my-dependencies
-		  	intermediary_image_name: my-image
+		  	intermediary_image_as: my-image
 
 		  	# Url WITHOUT tag. The tag is the computed hash
 		  	intermediary_image_url: https://ghcr.io/OWNER/my_intermediary_image
@@ -52,19 +56,22 @@ jobs:
 
 		  	# Pushes the intermediary image in after your workflow runs
 		  	should_push_intermediary_image: true
+
+		- name: Build final image
+		  run: DOCKER_BUILDKIT=1 docker build -t my_image:my_tag --build-arg BASE_IMAGE=${{ steps.deps.outputs.intermediary_tag }} .
 ```
 
 ### Inputs
 
 | Name | Required | Description |
 |:----:|:--------:|:-----------:|
-| `dockerfile_path` | No | The path to your Dockerfile's directory. Defaults to `.` |
+| `dockerfile_path` | No | The path to your Dockerfile's directory. Used to find the Dockerfile to hash and also to run the docker build command.g Defaults to `./` |
 | `docker_username` | No | Username to login to Docker registry |
 | `docker_password` | No | Password to login to Docker registry |
 | `docker_registry` | No | Registry to which to login. Defaults to "empty" which in turn defaults to Docker Hub |
 | `compute_dockerfile_hash` | No | Defaults to `false`. If this action should compute a hash of the first part of your Dockerfile (from the 1st line until the 2nd `FROM`) |
 | `intermediary_hash` | Yes | Should be the hash of any necessary files (ex: package.json, package-lock.json, requirements.txt ...) and will be used to compare if a new image is necessary or if the one in cache can be used. This will be rehashed with the Dockerfile hash if necessary. |
-| `intermediary_image_name` | Yes | The name of the intermediary file as described in your Dockerfile. This will be used to build that image using `--target` |
+| `intermediary_image_as` | Yes | The name of the intermediary file as described in your Dockerfile. This will be used to build that image using `--target` |
 | `intermediary_image_url` | Yes | This is the url without version used to find or publish the intermediary image. I personally use GitHub registry as a cache and upload my images where necessary (Docker Hub/ECR) |
 | `intermediary_build_flags` | No | Any build flags you would like to append to the build command |
 | `should_push_intermediary_image` | No | Defaults to `true`. If this action should push your intermediary image after your workflow runs |
@@ -74,7 +81,7 @@ The build command template looks like this:
 	docker build 
 		--pull
 		--no-cache
-		--target ${ inputs.intermediary_image_name }
+		--target ${ inputs.intermediary_image_as }
 		-t ${ inputs.intermediary_image_url }:${final_hash}
 		${ inputs.intermediary_build_flags  }
 		${ inputs.dockerfile_path }
@@ -102,18 +109,20 @@ jobs:
 			docker_registry: ghcr.io
 
 			intermediary_hash: ${{ steps.deps_hash.outputs.dependency_hash }}
-			intermediary_image_name: my-project-deps
-			intermediary_image_url: https://ghcr.io/jsmrcaga/my-repo-dependencies
+			intermediary_image_as: intermediary_image_as_in_dockerfile
+
+			# Note that your image name can be whatever you want (after my_username)
+			intermediary_image_url: https://ghcr.io/my_username/my_image_name
 			intermediary_build_flags: --build-arg NODE_ENV="development"
 ```
 
 ```dockerfile
 # Automatic hash will begin here
 
-ARG base_image=deps
+ARG base_image=intermediary_image_as_in_dockerfile
 
 # This is the name of the intermediary image you need to set on the workflow config
-FROM node as deps
+FROM node as intermediary_image_as_in_dockerfile
 
 COPY ./package.json /myapp
 COPY ./package-lock.json /myapp

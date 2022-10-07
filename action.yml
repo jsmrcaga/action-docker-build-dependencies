@@ -1,0 +1,67 @@
+nname: Docker step-build
+description: Build an intermediary dependency image for your Docker image
+
+author: Jo Colina
+
+branding:
+  color: blue
+  icon: box
+
+inputs:
+  dockerfile_path:
+    required: false
+    default: './'
+    description: 'The location of your Dockerfile, default is `./`. If hashing dockerfile the name "Dockerfile" will be appended to read the file'
+
+  docker_username:
+    required: true
+
+  docker_password:
+    required: true
+
+  docker_registry:
+    required: false
+    default: ''
+    description: 'The registry to login to. Default is blank for DockerHub, for GitHub use ghcr.io'
+
+  compute_dockerfile_hash:
+    required: false
+    description: 'If this action reads and computes a hash of the first part of your dockerfile'
+    default: false
+
+  intermediary_hash:
+    required: true
+    description: 'A hash used as a tag for your intermediary image. Creating a new image will also depend on this hash'
+
+  intermediary_image_as:
+    required: true
+    description: 'The alias of the image as specified on your Dockerfile `as xxxx`'
+
+  intermediary_image_url:
+    required: true
+    description: 'The URL to where to publish your image, format is everything except the image version'
+
+  intermediary_build_flags:
+    required: false
+    description: 'Any extra build flags you would like to append to the `docker build` command'
+    default: ''
+
+  should_push_intermediary_image:
+    required: false
+    description: 'If the action should push the intermediary image at the end of your workflow run'
+    default: true
+
+
+outputs:
+  intermediary_tag:
+    description: The intermediary image full url (with tag). You can use this to build your main image
+
+runs:
+  using: 'node16'
+
+  pre: 'scripts/pre.js'
+  
+  main: 'scripts/main.js'
+  
+  post: 'scripts/post.js'
+  post-if: success()

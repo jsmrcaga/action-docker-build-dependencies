@@ -27,10 +27,10 @@ const pipeline = () => {
 		should_compute_dockerifle_hash: JSON.parse(INPUT_COMPUTE_DOCKERFILE_HASH),
 	}).then(intermediary_url => {
 		// Set intermediary hash output for other actions to use
-		GitHub.command('set-output', `name=intermediary_tag::${intermediary_url}\n`);
+		GitHub.set_output('intermediary_tag', intermediary_url);
 
 		// Set intermediary hash as state for post action to use
-		GitHub.command('save-state', `name=INTERMEDIARY_TAG::${intermediary_url}\n`);
+		GitHub.save_state('INTERMEDIARY_TAG', intermediary_url);
 
 		return Docker.pull_or_build_intermediary({
 			intermediary_image_name: INPUT_INTERMEDIARY_IMAGE_AS,
